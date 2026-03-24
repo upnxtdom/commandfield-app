@@ -1,0 +1,84 @@
+Create three route files:
+
+1. routes/workers.js
+Using Express Router and lib/supabase.js:
+
+GET /api/workers/:business_id
+- Returns all workers for that business_id
+- Ordered by created_at ascending
+
+POST /api/workers
+- Accepts: { business_id, name, phone, email, role }
+- Inserts into public.workers table
+- Returns created worker object
+
+PUT /api/workers/:id
+- Accepts any updatable fields: name, phone, 
+  email, status
+- Updates worker by id
+- Returns updated worker object
+
+DELETE /api/workers/:id
+- Sets status to 'inactive' (soft delete)
+- Never hard deletes
+- Returns { success: true }
+
+2. routes/customers.js
+Using Express Router and lib/supabase.js:
+
+GET /api/customers/:business_id
+- Returns all customers for that business_id
+- Ordered by name ascending
+
+POST /api/customers
+- Accepts: { business_id, name, phone, email, address, notes }
+- Inserts into public.customers table
+- Returns created customer object
+
+PUT /api/customers/:id
+- Accepts any updatable fields
+- Updates customer by id
+- Returns updated customer object
+
+DELETE /api/customers/:id
+- Hard delete (customers can be fully removed)
+- Returns { success: true }
+
+3. routes/jobs.js
+Using Express Router and lib/supabase.js:
+
+GET /api/jobs/:business_id
+- Returns all jobs for that business_id
+- Ordered by scheduled_at descending
+- Include worker name and customer name 
+  via join or separate queries
+
+POST /api/jobs
+- Accepts: { business_id, worker_id, customer_id, 
+  title, job_type, scheduled_at, address, notes }
+- Inserts into public.jobs table
+- Status defaults to 'scheduled'
+- Returns created job object
+
+PUT /api/jobs/:id
+- Accepts any updatable fields including status
+- If status changes to 'in_progress' set started_at 
+  to now()
+- If status changes to 'completed' set completed_at 
+  to now()
+- Returns updated job object
+
+DELETE /api/jobs/:id
+- Sets status to 'cancelled' (soft delete)
+- Returns { success: true }
+
+GET /api/jobs/:id/timeline
+- Returns the job record plus all status changes
+  as a simple array with timestamps
+
+Then in index.js:
+- Import and mount all three routers:
+  workers at /api/workers
+  customers at /api/customers
+  jobs at /api/jobs
+- Confirm server still healthy after mounting
