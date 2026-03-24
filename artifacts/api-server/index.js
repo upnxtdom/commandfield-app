@@ -3,6 +3,10 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 
+const supabase = require("./lib/supabase");
+const stripe = require("./lib/stripe");
+const twilio = require("./lib/twilio");
+
 const app = express();
 const PORT = 3000;
 
