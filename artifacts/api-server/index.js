@@ -11,6 +11,8 @@ const authRouter = require("./routes/auth");
 const workersRouter = require("./routes/workers");
 const customersRouter = require("./routes/customers");
 const jobsRouter = require("./routes/jobs");
+const invoicesRouter = require("./routes/invoices");
+const kpiRouter = require("./routes/kpi");
 
 const app = express();
 const PORT = 3000;
@@ -26,6 +28,8 @@ app.use("/api/auth", authRouter);
 app.use("/api/workers", workersRouter);
 app.use("/api/customers", customersRouter);
 app.use("/api/jobs", jobsRouter);
+app.use("/api/invoices", invoicesRouter);
+app.use("/api/kpi", kpiRouter);
 
 app.listen(PORT, () => {
   console.log("CommandField API running on port 3000");
