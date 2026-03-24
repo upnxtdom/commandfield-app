@@ -7,6 +7,8 @@ const supabase = require("./lib/supabase");
 const stripe = require("./lib/stripe");
 const twilio = require("./lib/twilio");
 
+const authRouter = require("./routes/auth");
+
 const app = express();
 const PORT = 3000;
 
@@ -16,6 +18,8 @@ app.use(express.json());
 app.get("/health", (req, res) => {
   res.json({ status: "ok", service: "commandfield-api" });
 });
+
+app.use("/api/auth", authRouter);
 
 app.listen(PORT, () => {
   console.log("CommandField API running on port 3000");
