@@ -50,17 +50,17 @@ Every package extends `tsconfig.base.json` which sets `composite: true`. The roo
 
 ## Packages
 
-### `artifacts/api-server` (`@workspace/api-server`)
+### `artifacts/api-server` (CommandField API)
 
-Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` for request and response validation and `@workspace/db` for persistence.
+Plain Node.js + Express 4 API server. No TypeScript, no build step.
 
-- Entry: `src/index.ts` — reads `PORT`, starts Express
-- App setup: `src/app.ts` — mounts CORS, JSON/urlencoded parsing, routes at `/api`
-- Routes: `src/routes/index.ts` mounts sub-routers; `src/routes/health.ts` exposes `GET /health` (full path: `/api/health`)
-- Depends on: `@workspace/db`, `@workspace/api-zod`
-- `pnpm --filter @workspace/api-server run dev` — run the dev server
-- `pnpm --filter @workspace/api-server run build` — production esbuild bundle (`dist/index.cjs`)
-- Build bundles an allowlist of deps (express, cors, pg, drizzle-orm, zod, etc.) and externalizes the rest
+- Entry: `index.js` — loads dotenv, sets up Express with CORS, listens on port 3000
+- `routes/` — empty folder for future route modules
+- `lib/` — empty folder for future shared utilities
+- `.env` — empty environment file for secrets
+- `GET /health` returns `{ status: "ok", service: "commandfield-api" }`
+- Dependencies: express, @supabase/supabase-js, stripe, twilio, dotenv, cors
+- Run: `node index.js`
 
 ### `lib/db` (`@workspace/db`)
 
