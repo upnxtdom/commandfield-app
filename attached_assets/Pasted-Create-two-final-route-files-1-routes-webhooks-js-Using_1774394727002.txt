@@ -1,0 +1,121 @@
+Create two final route files:
+
+1. routes/webhooks.js
+Using Express Router, lib/supabase.js, and lib/stripe.js:
+
+POST /api/webhooks/stripe
+- This route needs raw body parsing (not JSON) 
+  for Stripe signature verification
+- Use stripe.webhooks.constructEvent() with 
+  STRIPE_WEBHOOK_SECRET from .env
+- If signature fails return 400
+
+Handle these Stripe events:
+
+checkout.session.completed:
+- Extract customer email, stripe_customer_id, 
+  and metadata from the session
+- Look up or create user in public.profiles
+- Create business record in public.businesses with:
+  stripe_customer_id, plan (from metadata), 
+  billing_cycle (from metadata),
+  subscription_status: 'active'
+- If plan is 'pro' set dispatch_seats to 3
+- Update founding_spots table: 
+  increment spots_taken by 1
+- Send welcome SMS via Twilio to phone in metadata:
+  "Welcome to CommandField! Your account is ready. 
+   Log in at commandfield.com/dashboard 
+   Your temp password: [generate random 8 chars] 
+   Change it on first login."
+
+invoice.payment_succeeded:
+- Find business by stripe_customer_id
+- Update subscription_status to 'active'
+
+invoice.payment_failed:
+- Find business by stripe_customer_id  
+- Update subscription_status to 'past_due'
+- Send SMS to owner:
+  "CommandField: Your payment failed. 
+   Please update billing at 
+   commandfield.com/billing 
+   to keep your account active."
+
+customer.subscription.deleted:
+- Find business by stripe_customer_id
+- Update subscription_status to 'cancelled'
+- Send SMS to owner:
+  "Your CommandField subscription has been 
+   cancelled. Questions? 
+   Text or call hello@commandfield.com"
+
+2. routes/onboarding.js
+Using Express Router and lib/supabase.js:
+
+POST /api/onboarding/business
+- Accepts: { user_id, business_name, vertical, 
+  phone, address, timezone, logo_url }
+- Updates the business record for this user
+- Returns updated business object
+
+POST /api/onboarding/workers
+- Accepts: { business_id, workers: 
+  [{ name, phone, email, role }] }
+- Bulk inserts workers into public.workers
+- For each worker sends onboarding SMS via Twilio:
+  "Hey [name], [business_name] just set you up 
+   on CommandField. You'll receive job assignments 
+   here. Reply START to activate your account."
+- Returns array of created workers
+
+POST /api/onboarding/assign-number
+- Accepts: { business_id, owner_phone }
+- Updates the business owner profile with 
+  their phone number
+- Sends test SMS to owner:
+  "CommandField is connected. 
+   Text 'jobs today' to test your command line. 
+   Reply HELP anytime for available commands."
+- Returns { success: true }
+
+GET /api/onboarding/status/:business_id
+- Returns onboarding completion status:
+  {
+    business_profile: bool (name + vertical filled),
+    workers_added: bool (at least 1 worker exists),
+    number_connected: bool (owner phone in profile),
+    onboarding_complete: bool (all three true)
+  }
+
+POST /api/enterprise/apply
+- Accepts the full enterprise application form data
+- Inserts into public.enterprise_applications
+- Sends SMS to your personal number notifying 
+  of new application:
+  "New CommandField Enterprise application from 
+   [business_name]. Check admin portal."
+- Returns { success: true }
+
+Then in index.js:
+- The webhooks route needs special handling - 
+  add this BEFORE the express.json() middleware:
+  app.use('/api/webhooks/stripe', 
+    express.raw({ type: 'application/json' }))
+- Then mount normally after:
+  webhooks at /api/webhooks
+  onboarding at /api/onboarding
+  enterprise at /api/enterprise
+- Confirm server still healthy after all mounts
+
+Final complete route list should be:
+/api/auth
+/api/workers
+/api/customers  
+/api/jobs
+/api/invoices
+/api/kpi
+/api/dispatch
+/api/webhooks
+/api/onboarding
+/api/enterprise
