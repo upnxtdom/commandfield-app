@@ -16,13 +16,35 @@ const quickActions = [
 
 const chips = ["jobs today", "kpi week", "workers"];
 
-const statusColor = (status: string) => {
-  switch ((status || '').toLowerCase()) {
-    case 'in_progress':
-    case 'in progress': return 'bg-accent'
-    case 'completed': return 'bg-success'
-    default: return 'bg-primary'
+const formatStatus = (status: string) => {
+  const map: Record<string, string> = {
+    scheduled:   'Scheduled',
+    in_progress: 'In Progress',
+    completed:   'Completed',
+    invoiced:    'Invoiced',
+    cancelled:   'Cancelled',
   }
+  return map[status] || status
+}
+
+const statusColor = (status: string) => {
+  const map: Record<string, string> = {
+    scheduled:   'bg-blue-500',
+    in_progress: 'bg-amber-500',
+    completed:   'bg-green-500',
+    invoiced:    'bg-purple-500',
+    cancelled:   'bg-red-500',
+  }
+  return map[status] || 'bg-gray-500'
+}
+
+const workerStatus = (status: string) => {
+  const map: Record<string, string> = {
+    active:   'Active',
+    inactive: 'Inactive',
+    busy:     'On Job',
+  }
+  return map[status] || status
 }
 
 const Dashboard = () => {
@@ -129,8 +151,8 @@ const Dashboard = () => {
                     </p>
                   )}
                 </div>
-                <span className={`text-xs px-2 py-1 rounded-full text-foreground ${statusColor(job.status)}`}>
-                  {job.status}
+                <span className={`text-xs px-2 py-1 rounded-full text-white ${statusColor(job.status)}`}>
+                  {formatStatus(job.status)}
                 </span>
               </div>
             ))
@@ -172,9 +194,9 @@ const Dashboard = () => {
               workers.map((w) => (
                 <div key={w.id} className="flex items-center justify-between py-2 border-b last:border-0">
                   <span className="text-sm text-foreground">
-                    {w.status === 'active' ? '🟢' : '🟡'} {w.name}
+                    {w.status === 'active' ? '🟢' : w.status === 'busy' ? '🟠' : '🔴'} {w.name}
                   </span>
-                  <span className="text-xs text-muted-foreground">{w.status}</span>
+                  <span className="text-xs text-muted-foreground">{workerStatus(w.status)}</span>
                 </div>
               ))
             )}
