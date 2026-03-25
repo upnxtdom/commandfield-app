@@ -1,5 +1,5 @@
 kind = "api"
-previewPath = "/api"
+previewPath = "/"
 title = "API Server"
 version = "1.0.0"
 id = "3B4_FFSkEVBkAeYMFRJ2e"
@@ -7,7 +7,7 @@ id = "3B4_FFSkEVBkAeYMFRJ2e"
 [[services]]
 localPort = 3000
 name = "API Server"
-paths = ["/api"]
+paths = ["/"]
 
 [services.development]
 run = "node index.js"
