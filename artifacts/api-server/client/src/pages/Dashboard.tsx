@@ -35,17 +35,8 @@ const Dashboard = () => {
   const [error, setError] = useState<string | null>(null)
 
   const fetchData = useCallback(async () => {
-    if (!session?.access_token) {
-      console.log('No session token available')
-      setDataLoading(false)
-      return
-    }
-    if (!profile?.business_id) {
-      setDataLoading(false)
-      return
-    }
-    const bid = profile.business_id
-    const token = session.access_token
+    const bid = profile!.business_id
+    const token = session!.access_token
     const headers = { Authorization: `Bearer ${token}` }
     console.log('Fetching with token:', session?.access_token?.substring(0, 20))
     try {
@@ -70,7 +61,11 @@ const Dashboard = () => {
     }
   }, [profile?.business_id, session?.access_token])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => {
+    if (session?.access_token && profile?.business_id) {
+      fetchData()
+    }
+  }, [session?.access_token, profile?.business_id, fetchData])
 
   const kpiCards = [
     { label: "Jobs Today",     value: kpi?.jobs_scheduled ?? 0,                                    icon: Briefcase },
