@@ -28,6 +28,14 @@ const statusColor = (status: string) => {
 const Dashboard = () => {
   const navigate = useNavigate();
   const { session, profile } = useAuth()
+
+  console.log('Dashboard render:', {
+    hasSession: !!session,
+    hasToken: !!session?.access_token,
+    hasProfile: !!profile,
+    businessId: profile?.business_id
+  })
+
   const [kpi, setKpi] = useState<any>(null)
   const [jobs, setJobs] = useState<any[]>([])
   const [workers, setWorkers] = useState<any[]>([])
