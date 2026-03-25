@@ -1,28 +1,11 @@
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Briefcase, Clock, CheckCircle, DollarSign,
   Plus, UserPlus, FileText, BarChart3,
 } from "lucide-react";
-
-const kpis = [
-  { label: "Jobs Today", value: "8", icon: Briefcase },
-  { label: "In Progress", value: "3", icon: Clock, color: "text-accent" },
-  { label: "Completed", value: "4", icon: CheckCircle, color: "text-success" },
-  { label: "Revenue Today", value: "$4,200", icon: DollarSign, color: "text-success" },
-];
-
-const jobs = [
-  { name: "AC Unit Repair", status: "In Progress", color: "bg-accent" },
-  { name: "Plumbing Fix", status: "Scheduled", color: "bg-primary" },
-  { name: "HVAC Inspection", status: "Completed", color: "bg-success" },
-];
-
-const workers = [
-  { name: "Mike Torres", status: "🟢", task: "In Progress: AC Unit Repair" },
-  { name: "Sarah Chen", status: "🟢", task: "Scheduled: Plumbing Fix" },
-  { name: "James Wilson", status: "🟡", task: "Available" },
-];
+import { useAuth } from '@/context/AuthContext'
 
 const quickActions = [
   { label: "New Job", icon: Plus, path: "/jobs" },
@@ -33,20 +16,72 @@ const quickActions = [
 
 const chips = ["jobs today", "kpi week", "workers"];
 
+const statusColor = (status: string) => {
+  switch ((status || '').toLowerCase()) {
+    case 'in_progress':
+    case 'in progress': return 'bg-accent'
+    case 'completed': return 'bg-success'
+    default: return 'bg-primary'
+  }
+}
+
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { session, profile } = useAuth()
+  const [kpi, setKpi] = useState<any>(null)
+  const [jobs, setJobs] = useState<any[]>([])
+  const [workers, setWorkers] = useState<any[]>([])
+  const [dataLoading, setDataLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchData = useCallback(async () => {
+    if (!profile?.business_id || !session?.access_token) {
+      setDataLoading(false)
+      return
+    }
+    const bid = profile.business_id
+    const token = session.access_token
+    const headers = { Authorization: `Bearer ${token}` }
+    try {
+      const [kpiRes, jobsRes, workersRes] = await Promise.all([
+        fetch(`/api/kpi/${bid}/today`, { headers }),
+        fetch(`/api/jobs/${bid}`, { headers }),
+        fetch(`/api/workers/${bid}`, { headers })
+      ])
+      const kpiData = await kpiRes.json()
+      const jobsData = await jobsRes.json()
+      const workersData = await workersRes.json()
+      setKpi(kpiData)
+      setJobs(Array.isArray(jobsData) ? jobsData.slice(0, 5) : [])
+      setWorkers(Array.isArray(workersData) ? workersData.slice(0, 3) : [])
+    } catch (e) {
+      console.log('Dashboard fetch error:', e)
+      setError('Failed to load dashboard data')
+    } finally {
+      setDataLoading(false)
+    }
+  }, [profile?.business_id, session?.access_token])
+
+  useEffect(() => { fetchData() }, [fetchData])
+
+  const kpiCards = [
+    { label: "Jobs Today",     value: kpi?.jobs_scheduled ?? 0,                                    icon: Briefcase },
+    { label: "In Progress",    value: kpi?.jobs_in_progress ?? 0,                                   icon: Clock,        color: "text-accent" },
+    { label: "Completed",      value: kpi?.jobs_completed ?? 0,                                     icon: CheckCircle,  color: "text-success" },
+    { label: "Revenue Today",  value: `$${(kpi?.revenue_today ?? 0).toLocaleString()}`,             icon: DollarSign,   color: "text-success" },
+  ]
 
   return (
     <div className="space-y-6 max-w-6xl">
       {/* KPI Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {kpis.map((kpi) => (
-          <div key={kpi.label} className="rounded-lg border bg-card p-4">
+        {kpiCards.map((card) => (
+          <div key={card.label} className="rounded-lg border bg-card p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-muted-foreground">{kpi.label}</span>
-              <kpi.icon className={`h-4 w-4 ${kpi.color || "text-muted-foreground"}`} />
+              <span className="text-sm text-muted-foreground">{card.label}</span>
+              <card.icon className={`h-4 w-4 ${card.color || "text-muted-foreground"}`} />
             </div>
-            <div className={`text-2xl font-bold ${kpi.color || "text-foreground"}`}>{kpi.value}</div>
+            <div className={`text-2xl font-bold ${card.color || "text-foreground"}`}>{card.value}</div>
           </div>
         ))}
       </div>
@@ -56,14 +91,39 @@ const Dashboard = () => {
         {/* Left - Active Jobs */}
         <div className="rounded-lg border bg-card p-4 space-y-3">
           <h2 className="font-semibold text-foreground">Active Jobs</h2>
-          {jobs.map((job) => (
-            <div key={job.name} className="flex items-center justify-between py-2 border-b last:border-0">
-              <span className="text-sm text-foreground">{job.name}</span>
-              <span className={`text-xs px-2 py-1 rounded-full text-foreground ${job.color}`}>
-                {job.status}
-              </span>
+          {dataLoading ? (
+            <>
+              <div className="h-8 rounded bg-muted animate-pulse" />
+              <div className="h-8 rounded bg-muted animate-pulse" />
+              <div className="h-8 rounded bg-muted animate-pulse" />
+            </>
+          ) : error ? (
+            <div className="space-y-2">
+              <p className="text-sm text-red-500">{error}</p>
+              <Button variant="outline" size="sm" onClick={fetchData}>Retry</Button>
             </div>
-          ))}
+          ) : jobs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No jobs scheduled today</p>
+          ) : (
+            jobs.map((job) => (
+              <div key={job.id} className="flex items-center justify-between py-2 border-b last:border-0">
+                <div>
+                  <span className="text-sm text-foreground">{job.title}</span>
+                  {job.address && (
+                    <p className="text-xs text-muted-foreground">{job.address}</p>
+                  )}
+                  {job.scheduled_at && (
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(job.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  )}
+                </div>
+                <span className={`text-xs px-2 py-1 rounded-full text-foreground ${statusColor(job.status)}`}>
+                  {job.status}
+                </span>
+              </div>
+            ))
+          )}
         </div>
 
         {/* Right */}
@@ -89,14 +149,24 @@ const Dashboard = () => {
           {/* Workers */}
           <div className="rounded-lg border bg-card p-4 space-y-3">
             <h2 className="font-semibold text-foreground">Workers</h2>
-            {workers.map((w) => (
-              <div key={w.name} className="flex items-center justify-between py-2 border-b last:border-0">
-                <span className="text-sm text-foreground">
-                  {w.status} {w.name}
-                </span>
-                <span className="text-xs text-muted-foreground">{w.task}</span>
-              </div>
-            ))}
+            {dataLoading ? (
+              <>
+                <div className="h-8 rounded bg-muted animate-pulse" />
+                <div className="h-8 rounded bg-muted animate-pulse" />
+                <div className="h-8 rounded bg-muted animate-pulse" />
+              </>
+            ) : workers.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No workers added yet</p>
+            ) : (
+              workers.map((w) => (
+                <div key={w.id} className="flex items-center justify-between py-2 border-b last:border-0">
+                  <span className="text-sm text-foreground">
+                    {w.status === 'active' ? '🟢' : '🟡'} {w.name}
+                  </span>
+                  <span className="text-xs text-muted-foreground">{w.status}</span>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

@@ -1,0 +1,76 @@
+Update client/src/pages/Dashboard.tsx 
+to replace static mock data with real API calls.
+
+At the top of the Dashboard component add:
+import { useState, useEffect, useCallback } from 'react'
+import { useAuth } from '@/context/AuthContext'
+
+Inside the component add:
+const { session, profile } = useAuth()
+const [kpi, setKpi] = useState(null)
+const [jobs, setJobs] = useState([])
+const [workers, setWorkers] = useState([])
+const [dataLoading, setDataLoading] = useState(true)
+const [error, setError] = useState(null)
+
+const fetchData = useCallback(async () => {
+  if (!profile?.business_id || !session?.access_token) {
+    setDataLoading(false)
+    return
+  }
+  const bid = profile.business_id
+  const token = session.access_token
+  const headers = { Authorization: `Bearer ${token}` }
+  try {
+    const [kpiRes, jobsRes, workersRes] = await Promise.all([
+      fetch(`/api/kpi/${bid}/today`, { headers }),
+      fetch(`/api/jobs/${bid}`, { headers }),
+      fetch(`/api/workers/${bid}`, { headers })
+    ])
+    const kpiData = await kpiRes.json()
+    const jobsData = await jobsRes.json()
+    const workersData = await workersRes.json()
+    setKpi(kpiData)
+    setJobs(Array.isArray(jobsData) ? jobsData.slice(0,5) : [])
+    setWorkers(Array.isArray(workersData) ? workersData.slice(0,3) : [])
+  } catch(e) {
+    console.log('Dashboard fetch error:', e)
+    setError('Failed to load dashboard data')
+  } finally {
+    setDataLoading(false)
+  }
+}, [profile?.business_id, session?.access_token])
+
+useEffect(() => { fetchData() }, [fetchData])
+
+Replace KPI card values:
+- Jobs Today → {kpi?.jobs_scheduled ?? 0}
+- In Progress → {kpi?.jobs_in_progress ?? 0}
+- Completed → {kpi?.jobs_completed ?? 0}
+- Revenue Today → ${(kpi?.revenue_today ?? 0).toLocaleString()}
+
+Replace Active Jobs section:
+- If dataLoading: show 3 gray pulse skeleton divs
+- If error: show red error text + Retry button 
+  onClick={fetchData}
+- If jobs.length === 0: "No jobs scheduled today"
+- Else: map jobs array, each card shows:
+  job.title, job.status badge, 
+  job.address, job.scheduled_at
+
+Replace Workers section:
+- If workers.length === 0: "No workers added yet"
+- Else: map workers array, each row shows:
+  worker.name + worker.status
+
+Do not change any styling or layout.
+Only replace static values with dynamic ones.
+
+After updating run:
+cd client && npm run build
+
+Then restart the server with:
+node index.js
+
+Confirm build succeeded and which 
+static values were replaced.
