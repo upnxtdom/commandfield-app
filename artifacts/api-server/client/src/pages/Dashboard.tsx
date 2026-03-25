@@ -35,13 +35,19 @@ const Dashboard = () => {
   const [error, setError] = useState<string | null>(null)
 
   const fetchData = useCallback(async () => {
-    if (!profile?.business_id || !session?.access_token) {
+    if (!session?.access_token) {
+      console.log('No session token available')
+      setDataLoading(false)
+      return
+    }
+    if (!profile?.business_id) {
       setDataLoading(false)
       return
     }
     const bid = profile.business_id
     const token = session.access_token
     const headers = { Authorization: `Bearer ${token}` }
+    console.log('Fetching with token:', session?.access_token?.substring(0, 20))
     try {
       const [kpiRes, jobsRes, workersRes] = await Promise.all([
         fetch(`/api/kpi/${bid}/today`, { headers }),
