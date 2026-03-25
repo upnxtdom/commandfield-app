@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Login from "./pages/Login";
@@ -15,25 +15,23 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/onboarding" element={<Onboarding />} />
-          <Route path="/" element={<AppLayout />}>
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="jobs" element={<PlaceholderPage title="Jobs" />} />
-            <Route path="dispatch" element={<PlaceholderPage title="Dispatch" />} />
-            <Route path="workers" element={<PlaceholderPage title="Workers" />} />
-            <Route path="customers" element={<PlaceholderPage title="Customers" />} />
-            <Route path="invoices" element={<PlaceholderPage title="Invoices" />} />
-            <Route path="kpi" element={<PlaceholderPage title="KPI" />} />
-            <Route path="billing" element={<PlaceholderPage title="Billing" />} />
-            <Route path="settings" element={<PlaceholderPage title="Settings" />} />
-            <Route index element={<Dashboard />} />
-          </Route>
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/" element={<AppLayout />}>
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="jobs" element={<PlaceholderPage title="Jobs" />} />
+          <Route path="dispatch" element={<PlaceholderPage title="Dispatch" />} />
+          <Route path="workers" element={<PlaceholderPage title="Workers" />} />
+          <Route path="customers" element={<PlaceholderPage title="Customers" />} />
+          <Route path="invoices" element={<PlaceholderPage title="Invoices" />} />
+          <Route path="kpi" element={<PlaceholderPage title="KPI" />} />
+          <Route path="billing" element={<PlaceholderPage title="Billing" />} />
+          <Route path="settings" element={<PlaceholderPage title="Settings" />} />
+          <Route index element={<Dashboard />} />
+        </Route>
+        <Route path="*" element={<NotFound />} />
+      </Routes>
     </TooltipProvider>
   </QueryClientProvider>
 );
