@@ -33,30 +33,25 @@ export function AuthProvider({ children }) {
     let mounted = true
 
     const init = async () => {
-      let localSession = null
-      let localProfile = null
+      console.log('init: calling getSession')
       try {
         const { data: { session } } =
           await supabase.auth.getSession()
-
-        localSession = session
-
+        console.log('init: getSession result', {
+          hasSession: !!session,
+          userId: session?.user?.id
+        })
         if (!mounted) return
-
         if (session?.user) {
           setSession(session)
           setUser(session.user)
           const p = await fetchProfile(session.user.id)
-          localProfile = p
           if (mounted) setProfile(p)
         }
       } catch (e) {
-        console.log('Init error:', e)
+        console.log('init error:', e)
       } finally {
-        console.log('Auth init complete:', {
-          hasSession: !!localSession,
-          hasProfile: !!localProfile
-        })
+        console.log('init: setting loading false')
         if (mounted) setLoading(false)
       }
     }
@@ -87,17 +82,28 @@ export function AuthProvider({ children }) {
   }, [])
 
   const signIn = async (email, password) => {
+    console.log('signIn: calling supabase')
     const { data, error } = await
       supabase.auth.signInWithPassword(
         { email, password }
       )
+    console.log('signIn: result', {
+      hasData: !!data,
+      hasSession: !!data?.session,
+      hasUser: !!data?.user,
+      error: error?.message
+    })
     if (error) return { error }
     if (data.session) {
+      console.log('signIn: setting session state')
       setSession(data.session)
       setUser(data.session.user)
+      console.log('signIn: fetching profile')
       const p = await fetchProfile(data.session.user.id)
+      console.log('signIn: profile result', p)
       setProfile(p)
     }
+    console.log('signIn: returning success')
     return { success: true }
   }
 
