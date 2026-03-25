@@ -7,6 +7,7 @@ import Onboarding from "./pages/Onboarding";
 import AppLayout from "./components/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import PlaceholderPage from "./pages/PlaceholderPage";
+import Jobs from "./pages/Jobs";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -28,7 +29,7 @@ const App = () => (
           }
         >
           <Route path="dashboard" element={<Dashboard />} />
-          <Route path="jobs" element={<PlaceholderPage title="Jobs" />} />
+          <Route path="jobs" element={<Jobs />} />
           <Route path="dispatch" element={<PlaceholderPage title="Dispatch" />} />
           <Route path="workers" element={<PlaceholderPage title="Workers" />} />
           <Route path="customers" element={<PlaceholderPage title="Customers" />} />
