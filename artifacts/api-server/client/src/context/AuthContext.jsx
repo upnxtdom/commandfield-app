@@ -33,9 +33,13 @@ export function AuthProvider({ children }) {
     let mounted = true
 
     const init = async () => {
+      let localSession = null
+      let localProfile = null
       try {
         const { data: { session } } =
           await supabase.auth.getSession()
+
+        localSession = session
 
         if (!mounted) return
 
@@ -43,11 +47,16 @@ export function AuthProvider({ children }) {
           setSession(session)
           setUser(session.user)
           const p = await fetchProfile(session.user.id)
+          localProfile = p
           if (mounted) setProfile(p)
         }
       } catch (e) {
         console.log('Init error:', e)
       } finally {
+        console.log('Auth init complete:', {
+          hasSession: !!localSession,
+          hasProfile: !!localProfile
+        })
         if (mounted) setLoading(false)
       }
     }
