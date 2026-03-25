@@ -2,6 +2,7 @@ require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
+const path = require("path");
 
 const supabase = require("./lib/supabase");
 const stripe = require("./lib/stripe");
@@ -45,6 +46,8 @@ const PUBLIC_PATHS = [
 ];
 
 app.use((req, res, next) => {
+  // Only protect /api/* routes — frontend files are public
+  if (!req.path.startsWith('/api/')) return next();
   const isPublic = PUBLIC_PATHS.some(
     (p) => p.method === req.method && p.path === req.path
   );
@@ -64,6 +67,16 @@ app.use("/api/dispatch", dispatchRouter);
 app.use("/api/webhooks", webhooksRouter);
 app.use("/api/onboarding", onboardingRouter);
 app.use("/api/enterprise", enterpriseRouter);
+
+// Serve static frontend files
+app.use(express.static(path.join(__dirname, 'public')));
+
+// All non-API routes serve the React app
+app.get('*', (req, res) => {
+  if (!req.path.startsWith('/api')) {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  }
+});
 
 app.listen(PORT, () => {
   console.log("CommandField API running on port 3000");
