@@ -4,10 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Zap } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/lib/supabase";
 
 const Login = () => {
   const navigate = useNavigate();
-  const { signIn, setNavigate } = useAuth();
+  const { setNavigate } = useAuth();
 
   useEffect(() => {
     setNavigate(navigate);
@@ -22,12 +23,18 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     setError("");
-    const result = await signIn(email, password);
-    if (result?.error) {
+
+    const { data, error } = await
+      supabase.auth.signInWithPassword(
+        { email, password }
+      );
+
+    if (error) {
       setError("Invalid email or password");
       setLoading(false);
       return;
     }
+
     navigate("/dashboard");
   };
 
