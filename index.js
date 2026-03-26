@@ -1,5 +1,17 @@
 require("dotenv").config();
 
+// Validate required environment variables at startup
+const REQUIRED_ENV = [
+  "SUPABASE_URL",
+  "SUPABASE_SERVICE_KEY",
+  "STRIPE_SECRET_KEY",
+];
+const missingEnv = REQUIRED_ENV.filter((k) => !process.env[k]);
+if (missingEnv.length > 0) {
+  console.error("Missing required environment variables:", missingEnv.join(", "));
+  process.exit(1);
+}
+
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
@@ -21,7 +33,7 @@ const onboardingRouter = require("./routes/onboarding");
 const enterpriseRouter = require("./routes/enterprise");
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // Body parsing
 app.use(cors());
@@ -78,6 +90,6 @@ app.get('*', (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log("CommandField API running on port 3000");
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`CommandField API running on port ${PORT}`);
 });
