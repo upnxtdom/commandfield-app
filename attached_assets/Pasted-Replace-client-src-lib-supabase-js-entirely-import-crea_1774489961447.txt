@@ -1,4 +1,31 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+Replace client/src/lib/supabase.js entirely:
+
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('Missing Supabase env vars')
+}
+
+export const supabase = createClient(
+  supabaseUrl,
+  supabaseAnonKey
+)
+
+Remove ALL custom auth options.
+Use Supabase default configuration.
+By default Supabase uses localStorage 
+with its own key management.
+Our custom storageKey was overriding 
+the default and breaking persistence.
+
+Then replace client/src/context/AuthContext.jsx 
+entirely with this clean version:
+
+import { createContext, useContext, 
+  useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useNavigate } from 'react-router-dom'
 
@@ -30,7 +57,9 @@ export function AuthProvider({ children }) {
         setSession(session)
         setUser(session?.user ?? null)
         if (session?.user) {
-          const p = await fetchProfile(session.user.id)
+          const p = await fetchProfile(
+            session.user.id
+          )
           setProfile(p)
         }
         setLoading(false)
@@ -43,7 +72,9 @@ export function AuthProvider({ children }) {
           setSession(session)
           setUser(session?.user ?? null)
           if (session?.user) {
-            const p = await fetchProfile(session.user.id)
+            const p = await fetchProfile(
+              session.user.id
+            )
             setProfile(p)
           } else {
             setProfile(null)
@@ -81,3 +112,33 @@ export function AuthProvider({ children }) {
 }
 
 export const useAuth = () => useContext(AuthContext)
+
+Key changes:
+- Removed custom storageKey (was breaking persistence)
+- Supabase default localStorage key works correctly
+- signOut just calls supabase.auth.signOut()
+  onAuthStateChange handles the navigation
+- signIn is simple - onAuthStateChange 
+  updates session state automatically
+- No manual setSession in signIn needed
+
+Also update client/src/pages/Login.tsx:
+Remove the 300ms delay and simplify:
+
+const handleSubmit = async (e) => {
+  e.preventDefault()
+  setLoading(true)
+  setError('')
+  const result = await signIn(email, password)
+  if (result?.error) {
+    setError('Invalid email or password')
+    setLoading(false)
+    return
+  }
+  navigate('/dashboard')
+}
+
+Rebuild:
+cd client && npm run build
+Restart: node index.js
+Confirm build succeeded.

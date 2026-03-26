@@ -17,15 +17,12 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     setError("");
-    console.log("handleSubmit: calling signIn");
     const result = await signIn(email, password);
-    console.log("handleSubmit: result", result);
     if (result?.error) {
       setError("Invalid email or password");
       setLoading(false);
       return;
     }
-    await new Promise(resolve => setTimeout(resolve, 300));
     navigate("/dashboard");
   };
 
