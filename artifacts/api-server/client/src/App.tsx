@@ -11,6 +11,7 @@ import Jobs from "./pages/Jobs";
 import Workers from "./pages/Workers";
 import Customers from "./pages/Customers";
 import Invoices from "./pages/Invoices";
+import Kpi from "./pages/Kpi";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -37,7 +38,7 @@ const App = () => (
           <Route path="workers" element={<Workers />} />
           <Route path="customers" element={<Customers />} />
           <Route path="invoices" element={<Invoices />} />
-          <Route path="kpi" element={<PlaceholderPage title="KPI" />} />
+          <Route path="kpi" element={<Kpi />} />
           <Route path="billing" element={<PlaceholderPage title="Billing" />} />
           <Route path="settings" element={<PlaceholderPage title="Settings" />} />
           <Route index element={<Dashboard />} />

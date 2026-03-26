@@ -1,0 +1,97 @@
+Wire the KPI page.
+Replace placeholder in 
+client/src/pages/Kpi.tsx (or KPI.tsx) with:
+
+IMPORTS:
+- useState, useEffect, useCallback from react
+- useAuth from @/context/AuthContext
+
+STATE:
+- kpiToday (null)
+- kpiWeek (null)
+- kpiMonth (null)
+- loading (true)
+- error (null)
+- activeTab ('today')
+  options: 'today' | 'week' | 'month'
+
+FETCH:
+Fetch all three in parallel using Promise.all:
+GET /api/kpi/:business_id/today
+GET /api/kpi/:business_id/week  
+GET /api/kpi/:business_id/month
+Bearer token on all three
+On success: set all three kpi states
+  (use .data ?? response for each)
+Finally: setLoading(false)
+Only fetch when session + business_id exist.
+
+ACTIVE KPI:
+const activeKpi = 
+  activeTab === 'today' ? kpiToday :
+  activeTab === 'week' ? kpiWeek : 
+  kpiMonth
+
+HELPERS:
+const formatCurrency = (val) =>
+  '$' + (val ?? 0).toLocaleString()
+
+PAGE LAYOUT:
+
+HEADER:
+"KPI Dashboard" heading
+
+TAB BAR:
+Today | This Week | This Month
+Active tab: blue background
+On click: update activeTab
+
+KPI CARDS (2x2 grid, then full width row):
+
+Row 1 (4 cards):
+- Jobs Scheduled: activeKpi?.jobs_scheduled ?? 0
+- In Progress: activeKpi?.jobs_in_progress ?? 0
+  (amber value)
+- Completed: activeKpi?.jobs_completed ?? 0
+  (green value)
+- Cancelled: activeKpi?.jobs_cancelled ?? 0
+  (red value)
+
+Row 2 (3 cards):
+- Revenue: formatCurrency(activeKpi?.revenue_today 
+  ?? activeKpi?.revenue_week 
+  ?? activeKpi?.revenue_month ?? 0)
+  (green value)
+- Active Workers: activeKpi?.workers_active ?? 0
+- Avg Job Duration: 
+  activeKpi?.avg_job_duration 
+  ? activeKpi.avg_job_duration + ' min' 
+  : 'N/A'
+
+PERFORMANCE SECTION:
+Below cards, full width card (#1E293B):
+Header: "Performance Summary"
+Show 4 stat rows:
+- Completion Rate: 
+  jobs_completed / jobs_scheduled * 100
+  formatted as X% (or N/A if 0 scheduled)
+- Jobs Per Day (week/month view):
+  jobs_scheduled / 7 or / 30
+  formatted as X.X
+- Revenue Per Job:
+  revenue / jobs_completed
+  formatted as currency (or N/A if 0 jobs)
+- Workers Utilization:
+  (jobs_in_progress / workers_active * 100)
+  formatted as X% (or N/A)
+
+STATES:
+- loading → skeleton cards
+- error → red message + retry
+
+Update App.tsx to use KPI component.
+
+Rebuild:
+cd client && npm run build
+Restart: node index.js
+Confirm build succeeded.
