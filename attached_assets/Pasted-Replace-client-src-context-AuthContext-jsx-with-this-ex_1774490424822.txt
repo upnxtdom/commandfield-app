@@ -1,4 +1,8 @@
-import { createContext, useContext, useEffect, useState, useRef } from 'react'
+Replace client/src/context/AuthContext.jsx 
+with this exact version:
+
+import { createContext, useContext, 
+  useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 
 const AuthContext = createContext({})
@@ -28,7 +32,8 @@ export function AuthProvider({ children }) {
 
     const init = async () => {
       try {
-        const { data } = await supabase.auth.getSession()
+        const { data } = await 
+          supabase.auth.getSession()
         const s = data?.session ?? null
         if (!mounted) return
         setSession(s)
@@ -37,7 +42,7 @@ export function AuthProvider({ children }) {
           const p = await fetchProfile(s.user.id)
           if (mounted) setProfile(p)
         }
-      } catch (e) {
+      } catch(e) {
         console.log('Auth init error:', e)
       } finally {
         if (mounted) setLoading(false)
@@ -58,7 +63,8 @@ export function AuthProvider({ children }) {
           } else {
             setProfile(null)
           }
-          if (event === 'SIGNED_OUT' && navigateRef.current) {
+          if (event === 'SIGNED_OUT' && 
+              navigateRef.current) {
             navigateRef.current('/login')
           }
         }
@@ -78,7 +84,7 @@ export function AuthProvider({ children }) {
         )
       if (error) return { error }
       return { success: true }
-    } catch (e) {
+    } catch(e) {
       return { error: e }
     }
   }
@@ -86,7 +92,7 @@ export function AuthProvider({ children }) {
   const signOut = async () => {
     try {
       await supabase.auth.signOut()
-    } catch (e) {
+    } catch(e) {
       console.log('SignOut error:', e)
     }
   }
@@ -106,3 +112,23 @@ export function AuthProvider({ children }) {
 }
 
 export const useAuth = () => useContext(AuthContext)
+
+Then update client/src/pages/Login.tsx:
+Add this inside the Login component 
+after useAuth():
+
+const { signIn, setNavigate } = useAuth()
+const navigate = useNavigate()
+
+useEffect(() => {
+  setNavigate(navigate)
+}, [navigate, setNavigate])
+
+This wires the navigate function into 
+AuthContext without calling useNavigate 
+inside the provider itself.
+
+Rebuild:
+cd client && npm run build
+Restart: node index.js
+Confirm build succeeded.
