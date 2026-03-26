@@ -13,6 +13,8 @@ import Customers from "./pages/Customers";
 import Invoices from "./pages/Invoices";
 import Kpi from "./pages/Kpi";
 import Dispatch from "./pages/Dispatch";
+import Settings from "./pages/Settings";
+import Billing from "./pages/Billing";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -40,8 +42,8 @@ const App = () => (
           <Route path="customers" element={<Customers />} />
           <Route path="invoices" element={<Invoices />} />
           <Route path="kpi" element={<Kpi />} />
-          <Route path="billing" element={<PlaceholderPage title="Billing" />} />
-          <Route path="settings" element={<PlaceholderPage title="Settings" />} />
+          <Route path="billing" element={<Billing />} />
+          <Route path="settings" element={<Settings />} />
           <Route index element={<Dashboard />} />
         </Route>
         <Route path="*" element={<NotFound />} />
