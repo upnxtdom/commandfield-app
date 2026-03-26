@@ -1,0 +1,110 @@
+Wire the Dispatch page.
+Replace placeholder in 
+client/src/pages/Dispatch.tsx with:
+
+IMPORTS:
+- useState, useEffect, useCallback, useRef 
+  from react
+- useAuth from @/context/AuthContext
+
+STATE:
+- command (empty string)
+- log (empty array) 
+  each entry: { id, type, text, timestamp }
+  type: 'user' | 'system' | 'error'
+- loading (false)
+- logHistory (empty array)
+
+FETCH DISPATCH LOG ON MOUNT:
+GET /api/dispatch/log/:business_id
+Bearer token
+On success: setLogHistory(data.data ?? data)
+Only fetch when session + business_id exist.
+
+SEND COMMAND:
+POST /api/dispatch/command
+Bearer token
+Body: { 
+  business_id: profile.business_id,
+  command: command.trim(),
+  phone: 'dashboard'
+}
+On success: 
+  Add user message to log
+  Add system response to log
+  Clear command input
+On error:
+  Add error entry to log
+
+CHIP COMMANDS:
+const chips = [
+  'jobs today',
+  'kpi today', 
+  'kpi week',
+  'workers',
+  'help'
+]
+Clicking chip fills command input
+
+PAGE LAYOUT:
+
+HEADER ROW:
+- "Dispatch Command" heading
+- "📡 Live" badge (green dot + text, right)
+
+COMMAND LOG (main area):
+Scrollable container (dark bg, #0A0F1E)
+Min height 400px
+Each log entry:
+  User message (right aligned, blue bubble):
+    "> jobs today" 
+  System response (left aligned, #1E293B):
+    Response text
+  Error (left aligned, red border):
+    Error text
+  Each entry shows timestamp (muted, tiny)
+
+Auto-scroll to bottom on new entry.
+Use useRef for scroll container.
+
+Empty log state:
+Centered in log area:
+  📡 icon
+  "Command center ready"
+  "Type a command or use the chips below"
+  (muted text)
+
+COMMAND INPUT BAR (fixed at bottom of page):
+Full width card (#1E293B):
+- Text input (dark bg):
+  value={command}
+  onChange updates command
+  onKeyDown: Enter key sends command
+  placeholder: "Type a command... 
+  e.g. 'jobs today' or 
+  'assign job to @mike'"
+  Disabled while loading
+- "Send →" button (blue):
+  onClick sends command
+  Disabled while loading or empty
+
+CHIPS ROW above input:
+Map chips array
+Each chip: pill button (#1E293B, hover blue)
+onClick: setCommand(chip)
+
+DISPATCH LOG HISTORY (below input):
+Collapsible section "Recent Commands"
+Show last 10 entries from logHistory
+Each row: timestamp | command | response preview
+
+STATES:
+- loading → show spinner in log area
+- error → show in log as error entry
+
+Update App.tsx to use Dispatch component.
+
+Rebuild:
+cd client && npm run build
+Restart: node index.js
+Confirm build succeeded.
