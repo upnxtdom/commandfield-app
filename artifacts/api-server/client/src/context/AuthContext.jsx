@@ -12,13 +12,21 @@ export function AuthProvider({ children }) {
 
   const fetchProfile = async (userId) => {
     try {
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single()
-      return data ?? null
-    } catch {
+      const result = await Promise.race([
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(
+            new Error('Profile fetch timeout')
+          ), 3000)
+        )
+      ])
+      return result.data ?? null
+    } catch (e) {
+      console.log('fetchProfile error:', e.message)
       return null
     }
   }
@@ -28,7 +36,14 @@ export function AuthProvider({ children }) {
 
     const init = async () => {
       try {
-        const { data } = await supabase.auth.getSession()
+        const { data } = await Promise.race([
+          supabase.auth.getSession(),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(
+              new Error('getSession timeout')
+            ), 5000)
+          )
+        ])
         const s = data?.session ?? null
         if (!mounted) return
         setSession(s)
@@ -38,8 +53,9 @@ export function AuthProvider({ children }) {
           if (mounted) setProfile(p)
         }
       } catch (e) {
-        console.log('Auth init error:', e)
+        console.log('init error:', e.message)
       } finally {
+        console.log('init finally: setting loading false')
         if (mounted) setLoading(false)
       }
     }
