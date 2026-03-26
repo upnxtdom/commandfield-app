@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import Jobs from "./pages/Jobs";
 import Workers from "./pages/Workers";
+import Customers from "./pages/Customers";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -33,7 +34,7 @@ const App = () => (
           <Route path="jobs" element={<Jobs />} />
           <Route path="dispatch" element={<PlaceholderPage title="Dispatch" />} />
           <Route path="workers" element={<Workers />} />
-          <Route path="customers" element={<PlaceholderPage title="Customers" />} />
+          <Route path="customers" element={<Customers />} />
           <Route path="invoices" element={<PlaceholderPage title="Invoices" />} />
           <Route path="kpi" element={<PlaceholderPage title="KPI" />} />
           <Route path="billing" element={<PlaceholderPage title="Billing" />} />
