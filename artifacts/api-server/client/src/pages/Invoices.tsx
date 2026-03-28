@@ -24,12 +24,29 @@ const FILTERS: { label: string; value: FilterType }[] = [
   { label: 'Overdue', value: 'overdue' },
 ]
 
+const INVOICE_STATUSES = ['draft', 'sent', 'paid']
+
+const defaultInvoiceForm = {
+  customer_id: '',
+  amount: '',
+  description: '',
+  status: 'draft'
+}
+
+const inputClass = 'w-full rounded-md border border-border bg-[#1E293B] px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-600'
+
 const Invoices = () => {
   const { session, profile } = useAuth()
-  const [invoices, setInvoices] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [filter, setFilter] = useState<FilterType>('all')
+  const [invoices, setInvoices]     = useState<any[]>([])
+  const [loading, setLoading]       = useState(true)
+  const [error, setError]           = useState<string | null>(null)
+  const [filter, setFilter]         = useState<FilterType>('all')
+
+  const [customers, setCustomers]   = useState<any[]>([])
+  const [showModal, setShowModal]   = useState(false)
+  const [form, setForm]             = useState({ ...defaultInvoiceForm })
+  const [submitting, setSubmitting] = useState(false)
+  const [formError, setFormError]   = useState<string | null>(null)
 
   const fetchInvoices = useCallback(async () => {
     setLoading(true)
@@ -47,18 +64,70 @@ const Invoices = () => {
     }
   }, [profile?.business_id, session?.access_token])
 
+  const fetchCustomers = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/customers/${profile!.business_id}`, {
+        headers: { Authorization: `Bearer ${session!.access_token}` }
+      })
+      const data = await res.json()
+      setCustomers(Array.isArray(data) ? data : (data.data ?? []))
+    } catch {}
+  }, [profile?.business_id, session?.access_token])
+
   useEffect(() => {
     if (session?.access_token && profile?.business_id) {
       fetchInvoices()
+      fetchCustomers()
     }
-  }, [session?.access_token, profile?.business_id, fetchInvoices])
+  }, [session?.access_token, profile?.business_id, fetchInvoices, fetchCustomers])
+
+  const openModal    = () => { setForm({ ...defaultInvoiceForm }); setFormError(null); setShowModal(true) }
+  const closeModal   = () => { setShowModal(false); setFormError(null) }
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
+    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
+
+  const handleSubmit = async () => {
+    if (!form.customer_id) { setFormError('Please select a customer.'); return }
+    if (!form.amount || isNaN(Number(form.amount)) || Number(form.amount) <= 0) {
+      setFormError('Please enter a valid amount.'); return
+    }
+    setSubmitting(true)
+    setFormError(null)
+    try {
+      const res = await fetch('/api/invoices', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session!.access_token}`
+        },
+        body: JSON.stringify({
+          business_id:  profile!.business_id,
+          customer_id:  form.customer_id,
+          amount:       parseFloat(form.amount),
+          description:  form.description.trim() || null,
+          status:       form.status
+        })
+      })
+      const data = await res.json()
+      if (!res.ok || data.success === false) {
+        setFormError(data.error || 'Failed to create invoice.')
+        return
+      }
+      closeModal()
+      fetchInvoices()
+    } catch {
+      setFormError('Network error. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   const filtered = filter === 'all'
     ? invoices
     : invoices.filter(i => i.status === filter)
 
-  const totalValue    = invoices.reduce((s, i) => s + (i.amount ?? 0), 0)
-  const totalPaid     = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + (i.amount ?? 0), 0)
+  const totalValue       = invoices.reduce((s, i) => s + (i.amount ?? 0), 0)
+  const totalPaid        = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + (i.amount ?? 0), 0)
   const totalOutstanding = invoices.filter(i => i.status !== 'paid').reduce((s, i) => s + (i.amount ?? 0), 0)
 
   return (
@@ -67,7 +136,7 @@ const Invoices = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">Invoices</h1>
-        <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+        <Button onClick={openModal} className="bg-blue-600 hover:bg-blue-700 text-white">
           + New Invoice
         </Button>
       </div>
@@ -135,6 +204,9 @@ const Invoices = () => {
                 {inv.job_title && (
                   <p className="text-xs text-muted-foreground truncate">{inv.job_title}</p>
                 )}
+                {inv.description && (
+                  <p className="text-xs text-muted-foreground truncate">{inv.description}</p>
+                )}
                 {inv.due_date && (
                   <p className="text-xs text-muted-foreground">
                     Due {new Date(inv.due_date).toLocaleDateString([], {
@@ -157,6 +229,74 @@ const Invoices = () => {
           ))
         )}
       </div>
+
+      {/* New Invoice Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 px-4 pt-6 pb-6 overflow-y-auto">
+          <div className="w-full max-w-md rounded-xl bg-[#0F172A] border border-border shadow-xl p-6 space-y-5 my-auto">
+
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-foreground">New Invoice</h2>
+              <button onClick={closeModal} className="text-muted-foreground hover:text-foreground text-xl">✕</button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-foreground">
+                  Customer <span className="text-red-400">*</span>
+                </label>
+                <select name="customer_id" value={form.customer_id} onChange={handleChange}
+                  className={inputClass}>
+                  <option value="">— Select customer —</option>
+                  {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-foreground">
+                  Amount ($) <span className="text-red-400">*</span>
+                </label>
+                <input name="amount" value={form.amount} onChange={handleChange}
+                  placeholder="e.g. 350.00" type="number" min="0" step="0.01"
+                  className={inputClass} />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-foreground">Description</label>
+                <textarea name="description" value={form.description} onChange={handleChange}
+                  placeholder="e.g. AC repair — replaced capacitor and contactor"
+                  rows={3}
+                  className={inputClass + ' resize-none'} />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-foreground">Status</label>
+                <select name="status" value={form.status} onChange={handleChange}
+                  className={inputClass}>
+                  {INVOICE_STATUSES.map(s => (
+                    <option key={s} value={s}>
+                      {s.charAt(0).toUpperCase() + s.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {formError && <p className="text-sm text-red-400">{formError}</p>}
+            </div>
+
+            <div className="flex gap-3 pt-1">
+              <button onClick={closeModal} disabled={submitting}
+                className="flex-1 rounded-md border border-border px-4 py-2 text-sm text-foreground hover:bg-muted disabled:opacity-50">
+                Cancel
+              </button>
+              <button onClick={handleSubmit} disabled={submitting}
+                className="flex-1 rounded-md bg-blue-600 hover:bg-blue-700 px-4 py-2 text-sm text-white disabled:opacity-50">
+                {submitting ? 'Creating...' : 'Create Invoice'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
