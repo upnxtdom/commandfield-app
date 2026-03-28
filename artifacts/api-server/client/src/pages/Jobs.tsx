@@ -45,12 +45,28 @@ const FILTERS: { label: string; value: FilterType }[] = [
   { label: 'Invoiced',    value: 'invoiced' },
 ]
 
+const JOB_TYPES = ['Repair', 'Install', 'New System', 'Maintenance', 'Inspection', 'Other']
+
+const defaultForm = {
+  title: '', job_type: 'Repair', scheduled_at: '',
+  address: '', notes: '', worker_id: '', customer_id: ''
+}
+
+const inputClass = 'w-full rounded-md bg-[#1E293B] border border-border text-foreground text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600 placeholder:text-muted-foreground'
+
 const Jobs = () => {
   const { session, profile } = useAuth()
-  const [jobs, setJobs] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [filter, setFilter] = useState<FilterType>('all')
+  const [jobs, setJobs]           = useState<any[]>([])
+  const [loading, setLoading]     = useState(true)
+  const [error, setError]         = useState<string | null>(null)
+  const [filter, setFilter]       = useState<FilterType>('all')
+
+  const [workers, setWorkers]       = useState<any[]>([])
+  const [customers, setCustomers]   = useState<any[]>([])
+  const [showModal, setShowModal]   = useState(false)
+  const [form, setForm]             = useState({ ...defaultForm })
+  const [submitting, setSubmitting] = useState(false)
+  const [formError, setFormError]   = useState<string | null>(null)
 
   const fetchJobs = useCallback(async () => {
     setLoading(true)
@@ -61,18 +77,92 @@ const Jobs = () => {
       })
       const data = await res.json()
       setJobs(Array.isArray(data) ? data : (data.data ?? []))
-    } catch (e) {
+    } catch {
       setError('Failed to load jobs')
     } finally {
       setLoading(false)
     }
   }, [profile?.business_id, session?.access_token])
 
+  const fetchWorkers = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/workers/${profile!.business_id}`, {
+        headers: { Authorization: `Bearer ${session!.access_token}` }
+      })
+      const data = await res.json()
+      setWorkers(Array.isArray(data) ? data : (data.data ?? []))
+    } catch {}
+  }, [profile?.business_id, session?.access_token])
+
+  const fetchCustomers = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/customers/${profile!.business_id}`, {
+        headers: { Authorization: `Bearer ${session!.access_token}` }
+      })
+      const data = await res.json()
+      setCustomers(Array.isArray(data) ? data : (data.data ?? []))
+    } catch {}
+  }, [profile?.business_id, session?.access_token])
+
   useEffect(() => {
     if (session?.access_token && profile?.business_id) {
       fetchJobs()
+      fetchWorkers()
+      fetchCustomers()
     }
-  }, [session?.access_token, profile?.business_id, fetchJobs])
+  }, [session?.access_token, profile?.business_id, fetchJobs, fetchWorkers, fetchCustomers])
+
+  const openModal = () => {
+    setForm({ ...defaultForm })
+    setFormError(null)
+    setShowModal(true)
+  }
+
+  const closeModal = () => {
+    setShowModal(false)
+    setFormError(null)
+  }
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
+  }
+
+  const handleSubmit = async () => {
+    if (!form.title.trim())       return setFormError('Job title is required.')
+    if (!form.scheduled_at)       return setFormError('Scheduled date & time is required.')
+    setSubmitting(true)
+    setFormError(null)
+    try {
+      const res = await fetch('/api/jobs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session!.access_token}`
+        },
+        body: JSON.stringify({
+          business_id:  profile!.business_id,
+          title:        form.title.trim(),
+          job_type:     form.job_type,
+          scheduled_at: form.scheduled_at,
+          address:      form.address.trim(),
+          notes:        form.notes.trim(),
+          worker_id:    form.worker_id   || null,
+          customer_id:  form.customer_id || null,
+        })
+      })
+      const data = await res.json()
+      if (!res.ok || data.error) {
+        setFormError(data.error || 'Failed to create job.')
+      } else {
+        closeModal()
+        fetchJobs()
+      }
+    } catch {
+      setFormError('Network error. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   const filteredJobs = filter === 'all'
     ? jobs
@@ -91,7 +181,7 @@ const Jobs = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">Jobs</h1>
-        <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2">
+        <Button onClick={openModal} className="bg-blue-600 hover:bg-blue-700 text-white gap-2">
           + New Job
         </Button>
       </div>
@@ -168,6 +258,121 @@ const Jobs = () => {
           ))
         )}
       </div>
+
+      {/* Create Job Modal */}
+      {showModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+          onClick={e => { if (e.target === e.currentTarget) closeModal() }}
+        >
+          <div className="w-full max-w-md bg-[#0F172A] border border-border rounded-xl p-6 space-y-4">
+            <h2 className="text-lg font-bold text-foreground">Create New Job</h2>
+
+            {/* Job Title */}
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">
+                Job Title <span className="text-red-400">*</span>
+              </label>
+              <input
+                name="title"
+                value={form.title}
+                onChange={handleChange}
+                placeholder="e.g. AC Repair"
+                className={inputClass}
+              />
+            </div>
+
+            {/* Job Type */}
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Job Type</label>
+              <select name="job_type" value={form.job_type} onChange={handleChange} className={inputClass}>
+                {JOB_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+
+            {/* Scheduled Date & Time */}
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">
+                Scheduled Date & Time <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="datetime-local"
+                name="scheduled_at"
+                value={form.scheduled_at}
+                onChange={handleChange}
+                className={inputClass}
+              />
+            </div>
+
+            {/* Assign Worker */}
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Assign Worker</label>
+              <select name="worker_id" value={form.worker_id} onChange={handleChange} className={inputClass}>
+                <option value="">— Unassigned —</option>
+                {workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+              </select>
+            </div>
+
+            {/* Customer */}
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Customer</label>
+              <select name="customer_id" value={form.customer_id} onChange={handleChange} className={inputClass}>
+                <option value="">— No customer —</option>
+                {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+
+            {/* Address */}
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Job Address</label>
+              <input
+                name="address"
+                value={form.address}
+                onChange={handleChange}
+                placeholder="123 Main St"
+                className={inputClass}
+              />
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Notes</label>
+              <textarea
+                name="notes"
+                value={form.notes}
+                onChange={handleChange}
+                rows={2}
+                placeholder="Optional notes..."
+                className={inputClass + ' resize-none'}
+              />
+            </div>
+
+            {/* Error */}
+            {formError && (
+              <p className="text-sm text-red-400">{formError}</p>
+            )}
+
+            {/* Footer */}
+            <div className="flex justify-end gap-3 pt-2">
+              <Button
+                variant="outline"
+                onClick={closeModal}
+                disabled={submitting}
+                className="border-border text-foreground"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {submitting ? 'Creating...' : 'Create Job'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

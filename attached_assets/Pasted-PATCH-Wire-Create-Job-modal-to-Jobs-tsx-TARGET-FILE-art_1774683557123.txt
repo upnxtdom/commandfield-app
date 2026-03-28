@@ -1,0 +1,80 @@
+PATCH: Wire Create Job modal to Jobs.tsx
+
+TARGET FILE: artifacts/api-server/client/src/pages/Jobs.tsx
+
+OBJECTIVE: Add a working "New Job" modal that POSTs to the existing 
+/api/jobs endpoint. No backend changes needed — route already exists.
+
+CHANGES REQUIRED:
+
+1. Add imports at top:
+   - useState already imported, no changes needed
+
+2. Add these constants before the Jobs component:
+   const JOB_TYPES = ['Repair', 'Install', 'New System', 'Maintenance', 'Inspection', 'Other']
+   
+   const defaultForm = {
+     title: '', job_type: 'Repair', scheduled_at: '',
+     address: '', notes: '', worker_id: '', customer_id: ''
+   }
+
+3. Inside Jobs component, add new state:
+   const [workers, setWorkers]     = useState<any[]>([])
+   const [customers, setCustomers] = useState<any[]>([])
+   const [showModal, setShowModal]   = useState(false)
+   const [form, setForm]             = useState({ ...defaultForm })
+   const [submitting, setSubmitting] = useState(false)
+   const [formError, setFormError]   = useState<string | null>(null)
+
+4. Add fetchWorkers and fetchCustomers as useCallback hooks 
+   (same pattern as fetchJobs — GET /api/workers/:business_id 
+   and GET /api/customers/:business_id with auth header).
+   Call both inside the existing useEffect alongside fetchJobs.
+
+5. Add modal handler functions:
+   openModal  → reset form + formError, setShowModal(true)
+   closeModal → setShowModal(false), clear formError
+   handleChange → updates form field by e.target.name
+   handleSubmit → validates title + scheduled_at are not empty,
+     POSTs to /api/jobs with auth header and payload:
+     { business_id, title, job_type, scheduled_at, address, 
+       notes, worker_id || null, customer_id || null }
+     On success: closeModal() + fetchJobs()
+     On error: setFormError with message
+
+6. Wire the existing "+ New Job" Button:
+   Change: <Button className="bg-blue-600...">+ New Job</Button>
+   To:     <Button onClick={openModal} className="bg-blue-600...">+ New Job</Button>
+
+7. Add modal JSX at bottom of return (before closing </div>):
+   Render only when showModal === true.
+   Dark overlay: fixed inset-0 z-50 bg-black/60
+   Modal card: max-w-md, bg-[#0F172A], border, rounded-xl, p-6
+
+   Fields in order:
+   - Job Title (text input, required, red asterisk)
+   - Job Type (select from JOB_TYPES array)
+   - Scheduled Date & Time (datetime-local input, required)
+   - Assign Worker (select from workers array, default "— Unassigned —")
+   - Customer (select from customers array, default "— No customer —")
+   - Job Address (text input, optional)
+   - Notes (textarea 2 rows, optional)
+   - formError display (text-red-400, show if set)
+   
+   Footer buttons:
+   - Cancel (variant outline, calls closeModal, disabled while submitting)
+   - Create Job (bg-blue-600, calls handleSubmit, 
+     shows "Creating..." while submitting)
+
+STYLE RULES:
+- All inputs: bg-[#1E293B] border-border text-foreground 
+  focus:ring-2 focus:ring-blue-600
+- Match existing dark theme throughout
+- No form tags — use onClick handlers only
+
+DO NOT:
+- Touch routes/jobs.js
+- Touch index.js  
+- Touch any other page component
+- Change the existing job list rendering
+- Add any new npm packages
