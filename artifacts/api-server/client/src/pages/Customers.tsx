@@ -17,6 +17,14 @@ const defaultCustomerForm = {
 
 const inputClass = 'w-full rounded-md border border-border bg-[#1E293B] px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-600'
 
+const jobStatusColor: Record<string, string> = {
+  scheduled:   'bg-blue-500',
+  in_progress: 'bg-amber-500',
+  completed:   'bg-green-500',
+  invoiced:    'bg-purple-500',
+  cancelled:   'bg-red-500',
+}
+
 const Customers = () => {
   const { session, profile } = useAuth()
   const [customers, setCustomers]   = useState<any[]>([])
@@ -28,6 +36,10 @@ const Customers = () => {
   const [form, setForm]             = useState({ ...defaultCustomerForm })
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError]   = useState<string | null>(null)
+
+  const [selectedCustomer, setSelectedCustomer] = useState<any | null>(null)
+  const [customerJobs, setCustomerJobs]         = useState<any[]>([])
+  const [jobsLoading, setJobsLoading]           = useState(false)
 
   const fetchCustomers = useCallback(async () => {
     setLoading(true)
@@ -90,6 +102,20 @@ const Customers = () => {
     }
   }
 
+  const openCustomer = async (customer: any) => {
+    setSelectedCustomer(customer)
+    setJobsLoading(true)
+    try {
+      const res = await fetch(`/api/jobs/${profile!.business_id}`, {
+        headers: { Authorization: `Bearer ${session!.access_token}` }
+      })
+      const data = await res.json()
+      const all = Array.isArray(data) ? data : (data.data ?? [])
+      setCustomerJobs(all.filter((j: any) => j.customer_id === customer.id))
+    } catch {}
+    finally { setJobsLoading(false) }
+  }
+
   const filtered = customers.filter(c =>
     c.name?.toLowerCase().includes(search.toLowerCase()) ||
     c.phone?.includes(search) ||
@@ -144,7 +170,11 @@ const Customers = () => {
           </div>
         ) : (
           filtered.map(c => (
-            <div key={c.id} className="rounded-lg bg-[#1E293B] p-4 flex items-center gap-4">
+            <div
+              key={c.id}
+              onClick={() => openCustomer(c)}
+              className="rounded-lg bg-[#1E293B] p-4 flex items-center gap-4 cursor-pointer hover:bg-[#263548] transition-colors"
+            >
               {/* Avatar */}
               <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-bold">
                 {initials(c.name || '?')}
@@ -166,7 +196,7 @@ const Customers = () => {
 
               {/* Right side */}
               <div className="flex-shrink-0 text-right space-y-1">
-                <p className="text-xs text-blue-400 cursor-pointer hover:text-blue-300">
+                <p className="text-xs text-blue-400">
                   View Jobs →
                 </p>
                 {c.last_service_date && (
@@ -244,6 +274,67 @@ const Customers = () => {
                 {submitting ? 'Adding...' : 'Add Customer'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Customer Detail Modal */}
+      {selectedCustomer && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 px-4 pt-6 pb-6 overflow-y-auto">
+          <div className="w-full max-w-md rounded-xl bg-[#0F172A] border border-border shadow-xl p-6 space-y-5 my-auto">
+
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-foreground">{selectedCustomer.name}</h2>
+              <button onClick={() => setSelectedCustomer(null)}
+                className="text-muted-foreground hover:text-foreground text-xl">✕</button>
+            </div>
+
+            <div className="space-y-2 text-sm text-muted-foreground">
+              {selectedCustomer.phone   && <p>📞 {selectedCustomer.phone}</p>}
+              {selectedCustomer.email   && <p>✉️ {selectedCustomer.email}</p>}
+              {selectedCustomer.address && <p>📍 {selectedCustomer.address}</p>}
+              {selectedCustomer.notes && (
+                <div className="mt-2 rounded-md bg-[#1E293B] p-3 text-foreground">
+                  <p className="text-xs text-muted-foreground mb-1">Notes</p>
+                  <p>{selectedCustomer.notes}</p>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <p className="text-sm font-semibold text-foreground mb-3">Jobs</p>
+              {jobsLoading ? (
+                <div className="h-12 rounded bg-muted animate-pulse" />
+              ) : customerJobs.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No jobs found for this customer.</p>
+              ) : (
+                <div className="space-y-2">
+                  {customerJobs.map(job => (
+                    <div key={job.id}
+                      className="rounded-md bg-[#1E293B] p-3 flex justify-between items-center">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{job.title}</p>
+                        {job.scheduled_at && (
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(job.scheduled_at).toLocaleDateString([], {
+                              month: 'short', day: 'numeric', year: 'numeric'
+                            })}
+                          </p>
+                        )}
+                      </div>
+                      <span className={`text-xs px-2 py-1 rounded-full text-white ${jobStatusColor[job.status] || 'bg-gray-500'}`}>
+                        {job.status.replace('_', ' ')}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <button onClick={() => setSelectedCustomer(null)}
+              className="w-full rounded-md border border-border px-4 py-2 text-sm text-foreground hover:bg-muted">
+              Close
+            </button>
           </div>
         </div>
       )}
