@@ -22,10 +22,8 @@ const initials = (name: string) =>
     .join('')
     .toUpperCase()
 
-const WORKER_ROLES = ['Technician', 'Lead Tech', 'Apprentice', 'Foreman', 'Driver', 'Other']
-
 const defaultWorkerForm = {
-  name: '', phone: '', email: '', role: 'Technician'
+  name: '', phone: '', email: ''
 }
 
 const inputClass = 'w-full rounded-md border border-border bg-[#1E293B] px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-600'
@@ -84,8 +82,7 @@ const Workers = () => {
           business_id: profile!.business_id,
           name:        form.name.trim(),
           phone:       form.phone.trim(),
-          email:       form.email.trim() || null,
-          role:        form.role
+          email:       form.email.trim() || null
         })
       })
       const data = await res.json()
@@ -218,14 +215,6 @@ const Workers = () => {
                 <input name="email" value={form.email} onChange={handleChange}
                   placeholder="optional" type="email"
                   className={inputClass} />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-foreground">Role</label>
-                <select name="role" value={form.role} onChange={handleChange}
-                  className={inputClass}>
-                  {WORKER_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-                </select>
               </div>
 
               {formError && <p className="text-sm text-red-400">{formError}</p>}
