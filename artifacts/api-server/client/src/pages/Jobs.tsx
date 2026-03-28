@@ -262,10 +262,10 @@ const Jobs = () => {
       {/* Create Job Modal */}
       {showModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+          className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 px-4 pt-6 pb-6 overflow-y-auto"
           onClick={e => { if (e.target === e.currentTarget) closeModal() }}
         >
-          <div className="w-full max-w-md bg-[#0F172A] border border-border rounded-xl p-6 space-y-4">
+          <div className="w-full max-w-md rounded-xl bg-[#0F172A] border border-border shadow-xl p-6 space-y-5 my-auto">
             <h2 className="text-lg font-bold text-foreground">Create New Job</h2>
 
             {/* Job Title */}
