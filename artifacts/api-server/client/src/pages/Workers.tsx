@@ -22,11 +22,24 @@ const initials = (name: string) =>
     .join('')
     .toUpperCase()
 
+const WORKER_ROLES = ['Technician', 'Lead Tech', 'Apprentice', 'Foreman', 'Driver', 'Other']
+
+const defaultWorkerForm = {
+  name: '', phone: '', email: '', role: 'Technician'
+}
+
+const inputClass = 'w-full rounded-md border border-border bg-[#1E293B] px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-600'
+
 const Workers = () => {
   const { session, profile } = useAuth()
-  const [workers, setWorkers] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [workers, setWorkers]       = useState<any[]>([])
+  const [loading, setLoading]       = useState(true)
+  const [error, setError]           = useState<string | null>(null)
+
+  const [showModal, setShowModal]   = useState(false)
+  const [form, setForm]             = useState({ ...defaultWorkerForm })
+  const [submitting, setSubmitting] = useState(false)
+  const [formError, setFormError]   = useState<string | null>(null)
 
   const fetchWorkers = useCallback(async () => {
     setLoading(true)
@@ -50,6 +63,45 @@ const Workers = () => {
     }
   }, [session?.access_token, profile?.business_id, fetchWorkers])
 
+  const openModal  = () => { setForm({ ...defaultWorkerForm }); setFormError(null); setShowModal(true) }
+  const closeModal = () => { setShowModal(false); setFormError(null) }
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
+
+  const handleSubmit = async () => {
+    if (!form.name.trim())  { setFormError('Worker name is required.'); return }
+    if (!form.phone.trim()) { setFormError('Phone number is required.'); return }
+    setSubmitting(true)
+    setFormError(null)
+    try {
+      const res = await fetch('/api/workers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session!.access_token}`
+        },
+        body: JSON.stringify({
+          business_id: profile!.business_id,
+          name:        form.name.trim(),
+          phone:       form.phone.trim(),
+          email:       form.email.trim() || null,
+          role:        form.role
+        })
+      })
+      const data = await res.json()
+      if (!res.ok || data.success === false) {
+        setFormError(data.error || 'Failed to add worker.')
+        return
+      }
+      closeModal()
+      fetchWorkers()
+    } catch {
+      setFormError('Network error. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   const counts = {
     total:    workers.length,
     active:   workers.filter(w => w.status === 'active').length,
@@ -62,7 +114,7 @@ const Workers = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">Workers</h1>
-        <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2">
+        <Button onClick={openModal} className="bg-blue-600 hover:bg-blue-700 text-white gap-2">
           + Add Worker
         </Button>
       </div>
@@ -129,6 +181,67 @@ const Workers = () => {
               </p>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Add Worker Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 px-4 pt-6 pb-6 overflow-y-auto">
+          <div className="w-full max-w-md rounded-xl bg-[#0F172A] border border-border shadow-xl p-6 space-y-5 my-auto">
+
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-foreground">Add Worker</h2>
+              <button onClick={closeModal} className="text-muted-foreground hover:text-foreground text-xl">✕</button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-foreground">
+                  Full Name <span className="text-red-400">*</span>
+                </label>
+                <input name="name" value={form.name} onChange={handleChange}
+                  placeholder="e.g. Mike Torres"
+                  className={inputClass} />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-foreground">
+                  Phone <span className="text-red-400">*</span>
+                </label>
+                <input name="phone" value={form.phone} onChange={handleChange}
+                  placeholder="e.g. 979-555-0123" type="tel"
+                  className={inputClass} />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-foreground">Email</label>
+                <input name="email" value={form.email} onChange={handleChange}
+                  placeholder="optional" type="email"
+                  className={inputClass} />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-foreground">Role</label>
+                <select name="role" value={form.role} onChange={handleChange}
+                  className={inputClass}>
+                  {WORKER_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
+
+              {formError && <p className="text-sm text-red-400">{formError}</p>}
+            </div>
+
+            <div className="flex gap-3 pt-1">
+              <button onClick={closeModal} disabled={submitting}
+                className="flex-1 rounded-md border border-border px-4 py-2 text-sm text-foreground hover:bg-muted disabled:opacity-50">
+                Cancel
+              </button>
+              <button onClick={handleSubmit} disabled={submitting}
+                className="flex-1 rounded-md bg-blue-600 hover:bg-blue-700 px-4 py-2 text-sm text-white disabled:opacity-50">
+                {submitting ? 'Adding...' : 'Add Worker'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
