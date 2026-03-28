@@ -116,6 +116,8 @@ const Jobs = () => {
     setForm({ ...defaultForm })
     setFormError(null)
     setShowModal(true)
+    fetchCustomers()
+    fetchWorkers()
   }
 
   const closeModal = () => {
